@@ -28,6 +28,8 @@ io.on("connection", (socket) => {
       socket.emit("left-room")
   })
 
+  socket.to("123").emit("room123", "test 1");
+
   socket.on("disconnect", () => {
     console.log(`${socket.id} disconnected`)
   })
