@@ -7,12 +7,12 @@ exports.up = function(knex) {
         table.increments('id').primary();
         table.string('username').notNullable().unique();
         table.string('password').notNullable();
-        table.smallint('level').notNullable();
-        table.bigint('experience');
-        table.bigInteger('coins');
-        table.integer('games_played');
-        table.integer('games_hosted');
-        table.string('email').notNullable().unique();
+        table.smallint('level').notNullable().unsigned().defaultTo(1);
+        table.integer('experience').unsigned();
+        table.integer('coins').unsigned();
+        table.integer('games_played').unsigned();
+        table.integer('games_hosted').unsigned();
+        table.string('email').unique();
         table.timestamp('creation_time').defaultTo(knex.fn.now());
         table.timestamp('last_played');
     });
