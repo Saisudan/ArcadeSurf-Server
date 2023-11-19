@@ -23,12 +23,12 @@ io.on("connection", (socket) => {
   })
 
   socket.on("leave-room", (leavingRoomName) => {
-      console.log(`left room: ${leavingRoomName}`)
+      console.log(`left room: ${leavingRoomName}`);
       socket.leave(leavingRoomName)
       socket.emit("left-room")
   })
 
-  socket.to("123").emit("room123", "test 1");
+  
 
   socket.on("disconnect", () => {
     console.log(`${socket.id} disconnected`)
