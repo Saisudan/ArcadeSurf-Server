@@ -13,7 +13,6 @@ exports.up = function(knex) {
         table.smallint('coins').notNullable().unsigned();
         table.check('?? >= ??', ['max_players', 'min_players']);
     });
-  
 };
 
 /**
