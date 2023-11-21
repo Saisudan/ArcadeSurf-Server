@@ -18,6 +18,34 @@ router.get('/my-info', authorize, async (req, res) => {
     }
 });
 
+// Check if a username is taken
+router.get("/is-name-taken", async (req, res) => {
+  const { username } = req.query;
+
+  // Check if there are query parameters with data
+  if (!username) {
+    res.status(400).send("No username provided");
+    return;
+  }
+
+  try {
+    const accountExists = await knex.select("username").from("users").where('username', username).first();
+    if (accountExists) {
+      // Username is taken
+      res.status(200).send(true);
+      return;
+    } else {
+      // Username is available
+      res.status(200).send(false);
+      return;
+    }
+
+  } catch (error) {
+    res.status(400).send("Failed to check availability");
+    return;
+  }
+});
+
 // Sign up a new user account
 router.post('/signup', async (req, res) => {
   const { username, password } = req.body;
