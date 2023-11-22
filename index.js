@@ -1,13 +1,15 @@
 // Initialize
 require("dotenv").config();
-const { createServer } = require("http");
-const { Server } = require("socket.io");
+const EXPRESS_SERVER_PORT = process.env.EXPRESS_SERVER_PORT || 8080;
+const SOCKET_SERVER_PORT = process.env.SOCKET_SERVER_PORT || 8081;
 
 const express = require("express");
 const app = express();
-const EXPRESS_SERVER_PORT = process.env.EXPRESS_SERVER_PORT || 8080;
-const SOCKET_SERVER_PORT = process.env.SOCKET_SERVER_PORT || 8081;
 const cors = require('cors');
+const userRoutes = require("./routes/users");
+
+const { createServer } = require("http");
+const { Server } = require("socket.io");
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -22,6 +24,8 @@ app.use(express.json());
 // Express Routes /////////////////////////////////////////////////////////////////////
 // Health Check
 app.get("/", (_req, res) => { res.status(200).send("Express Server is running")});
+
+app.use("/users", userRoutes);
 
 app.listen(EXPRESS_SERVER_PORT, () => {
   console.log(`Express Server running: http://localhost:${EXPRESS_SERVER_PORT}`);
