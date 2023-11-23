@@ -8,6 +8,7 @@ const app = express();
 const cors = require('cors');
 const userRoutes = require("./routes/users");
 
+const knex = require('knex')(require('./knexfile'));
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const httpServer = createServer(app);
@@ -36,24 +37,76 @@ app.listen(EXPRESS_SERVER_PORT, () => {
 io.on("connection", (socket) => {
   console.log("connected");
 
-  socket.on("join-room", (roomName) => {
-      console.log(`room: ${roomName}`)
-      socket.join(roomName);
-      socket.emit("joined-room", roomName)
-  })
+  // Allows users to join a lobby
+  socket.on("join-room", async (receivedData) => {
+    try {
+      const { roomID, username } = receivedData;
 
-  socket.on("leave-room", (leavingRoomName) => {
-      console.log(`left room: ${leavingRoomName}`);
-      socket.leave(leavingRoomName)
-      socket.emit("left-room")
-  })
+      // Check if the lobby exists in the database
+      const joinedRoom = await knex('lobbies').where({ id: roomID }).first();
+      const currentUser = await knex('users').where({ username: username }).first();
+      const isInLobby = await knex('users_to_lobbies').where({ lobby_id: roomID, user_id: currentUser.id }).first()
+      if (!joinedRoom) {
+        // Couldn't find room
+        socket.emit("failed-join");
+        return;
+      } else if (isInLobby) {
+        // Found that this user should be in this room
+        const activePlayers = await knex('users_to_lobbies')
+          .where({ lobby_id: roomID })
+          .join('users', 'users.id', 'users_to_lobbies.user_id')
+          .select('users.username', 'users_to_lobbies.*');
+        socket.join(joinedRoom.id);
+        socket.emit("joined-room", activePlayers);
+        socket.to(joinedRoom.id).emit("players-in-room", activePlayers)
 
-  
+// Add in logic here to check if user is allowed to join, check room size, visibility, password, etc.
+      
+      } else {
+        // For authenticated users
+        await knex('users_to_lobbies').insert({ user_id: currentUser.id, lobby_id: joinedRoom.id });
+        const activePlayers = await knex('users_to_lobbies')
+          .where({ lobby_id: roomID })
+          .join('users', 'users.id', 'users_to_lobbies.user_id')
+          .select('users.username', 'users_to_lobbies.*');
+        socket.join(joinedRoom.id);
+        socket.emit("joined-room", activePlayers);
+        socket.to(joinedRoom.id).emit("players-in-room", activePlayers)
+      }
+    } catch (error) {
+      console.log(error)
+      return;
+    }
+  });
+
+  // Allows users to leave a lobby
+  socket.on("leave-room", async (receivedData) => {
+    try {
+      const { roomID, username } = receivedData;
+
+      // Remove user from lobby
+      const currentUser = await knex('users').where({ username: username }).first();
+      await knex('users_to_lobbies').del().where({ lobby_id: roomID, user_id: currentUser.id });
+      socket.leave(roomID);
+      socket.emit("left-room");
+
+      // Update the other players in the room
+      const activePlayers = await knex('users_to_lobbies')
+        .where({ lobby_id: roomID })
+        .join('users', 'users.id', 'users_to_lobbies.user_id')
+        .select('users.username', 'users_to_lobbies.*');
+      socket.to(roomID).emit("players-in-room", activePlayers);
+    } catch (error) {
+      console.log(error)
+      return;
+    }
+  });
 
   socket.on("disconnect", () => {
     console.log(`${socket.id} disconnected`)
-  })
+  });
 });
+
 
 httpServer.listen(SOCKET_SERVER_PORT, () => {
   console.log(`Socket Server running: http://localhost:${SOCKET_SERVER_PORT}`);
