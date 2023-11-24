@@ -7,6 +7,7 @@ const express = require("express");
 const app = express();
 const cors = require('cors');
 const userRoutes = require("./routes/users");
+const gameRoutes = require("./routes/games");
 
 const knex = require('knex')(require('./knexfile'));
 const { createServer } = require("http");
@@ -28,6 +29,7 @@ app.use(express.static("public"));
 app.get("/", (_req, res) => { res.status(200).send("Express Server is running")});
 
 app.use("/users", userRoutes);
+app.use("/games", gameRoutes);
 
 app.listen(EXPRESS_SERVER_PORT, () => {
   console.log(`Express Server running: http://localhost:${EXPRESS_SERVER_PORT}`);
