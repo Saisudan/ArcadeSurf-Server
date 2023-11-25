@@ -105,6 +105,11 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("won-game", async (receivedData) => {
+    const { roomID, username } = receivedData;
+    socket.to(roomID).emit("lost-game");
+  })
+
   socket.on("disconnect", () => {
     console.log(`${socket.id} disconnected`)
   });
