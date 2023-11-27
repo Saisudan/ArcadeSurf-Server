@@ -7,6 +7,7 @@ const express = require("express");
 const app = express();
 const cors = require('cors');
 const userRoutes = require("./routes/users");
+const gameRoutes = require("./routes/games");
 
 const knex = require('knex')(require('./knexfile'));
 const { createServer } = require("http");
@@ -20,6 +21,7 @@ const io = new Server(httpServer, {
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
 
 
 // Express Routes /////////////////////////////////////////////////////////////////////
@@ -27,6 +29,7 @@ app.use(express.json());
 app.get("/", (_req, res) => { res.status(200).send("Express Server is running")});
 
 app.use("/users", userRoutes);
+app.use("/games", gameRoutes);
 
 app.listen(EXPRESS_SERVER_PORT, () => {
   console.log(`Express Server running: http://localhost:${EXPRESS_SERVER_PORT}`);
@@ -101,6 +104,11 @@ io.on("connection", (socket) => {
       return;
     }
   });
+
+  socket.on("won-game", async (receivedData) => {
+    const { roomID, username } = receivedData;
+    socket.to(roomID).emit("lost-game");
+  })
 
   socket.on("disconnect", () => {
     console.log(`${socket.id} disconnected`)
