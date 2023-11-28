@@ -115,6 +115,17 @@ io.on("connection", (socket) => {
     socket.to(room).emit("other-player-positions", receivedData);
   });
 
+  socket.on("player-ready", (receivedData) => {
+    const { roomID, username } = receivedData;
+    socket.emit("confirmed-ready");
+  });
+
+  socket.on("start-game", (receivedData) => {
+    const { roomID, username } = receivedData;
+    socket.emit("confirmed-start");
+    socket.to(roomID).emit("confirmed-start");
+  });
+
   socket.on("disconnect", () => {
     console.log(`${socket.id} disconnected`)
   });

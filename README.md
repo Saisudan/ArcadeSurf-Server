@@ -1,2 +1,2 @@
-# Party Game - Server
+# ArcadeSurf - Server
 ## BrainStation Capstone Project
