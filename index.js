@@ -105,10 +105,26 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("won-game", async (receivedData) => {
+  socket.on("won-game", (receivedData) => {
     const { roomID, username } = receivedData;
     socket.to(roomID).emit("lost-game");
-  })
+  });
+
+  socket.on("current-player-position", (receivedData) => {
+    const { room } = receivedData;
+    socket.to(room).emit("other-player-positions", receivedData);
+  });
+
+  socket.on("player-ready", (receivedData) => {
+    const { roomID, username } = receivedData;
+    socket.emit("confirmed-ready");
+  });
+
+  socket.on("start-game", (receivedData) => {
+    const { roomID, username } = receivedData;
+    socket.emit("confirmed-start");
+    socket.to(roomID).emit("confirmed-start");
+  });
 
   socket.on("disconnect", () => {
     console.log(`${socket.id} disconnected`)
