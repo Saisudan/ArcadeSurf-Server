@@ -38,6 +38,32 @@ app.listen(EXPRESS_SERVER_PORT, () => {
 io.on("connection", (socket) => {
   console.log("connected");
 
+  // Allows users to create a lobby
+  socket.on("create-room", async (receivedData) => {
+    try {
+      const { username } = receivedData;
+
+      // Create the lobby and add the user to it
+      const newLobby = {
+        match_id: null,
+        progress: 0,
+        status: "queueing",
+        is_done: false,
+        on_hold: false,
+        visibility: "public",
+        password: null
+      };
+      const newLobbyID = await knex('lobbies').insert(newLobby);
+      const currentUser = await knex('users').where({ username: username }).first();
+      await knex('users_to_lobbies').insert({ user_id: currentUser.id, lobby_id: newLobbyID });
+      socket.emit("created-room", newLobbyID);
+
+    } catch (error) {
+      console.log(error);
+      return;
+    }
+  });
+
   // Allows users to join a lobby
   socket.on("join-room", async (receivedData) => {
     try {
@@ -46,20 +72,20 @@ io.on("connection", (socket) => {
       // Check if the lobby exists in the database
       const joinedRoom = await knex('lobbies').where({ id: roomID }).first();
       const currentUser = await knex('users').where({ username: username }).first();
-      const isInLobby = await knex('users_to_lobbies').where({ lobby_id: roomID, user_id: currentUser.id }).first()
+      const isInLobby = await knex('users_to_lobbies').where({ lobby_id: roomID, user_id: currentUser.id }).first();
       if (!joinedRoom) {
         // Couldn't find room
         socket.emit("failed-join");
         return;
       } else if (isInLobby) {
-        // Found that this user should be in this room
+        // Found that this user already joined this room previously
         const activePlayers = await knex('users_to_lobbies')
           .where({ lobby_id: roomID })
           .join('users', 'users.id', 'users_to_lobbies.user_id')
           .select('users.username', 'users_to_lobbies.*');
         socket.join(joinedRoom.id);
         socket.emit("joined-room", activePlayers);
-        socket.to(joinedRoom.id).emit("players-in-room", activePlayers)
+        socket.to(joinedRoom.id).emit("players-in-room", activePlayers);
 
 // Add in logic here to check if user is allowed to join, check room size, visibility, password, etc.
       
@@ -72,10 +98,10 @@ io.on("connection", (socket) => {
           .select('users.username', 'users_to_lobbies.*');
         socket.join(joinedRoom.id);
         socket.emit("joined-room", activePlayers);
-        socket.to(joinedRoom.id).emit("players-in-room", activePlayers)
+        socket.to(joinedRoom.id).emit("players-in-room", activePlayers);
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
       return;
     }
   });
@@ -98,14 +124,15 @@ io.on("connection", (socket) => {
         .select('users.username', 'users_to_lobbies.*');
       socket.to(roomID).emit("players-in-room", activePlayers);
     } catch (error) {
-      console.log(error)
+      console.log(error);
       return;
     }
   });
 
   socket.on("won-game", (receivedData) => {
     const { roomID, username } = receivedData;
-    socket.to(roomID).emit("lost-game");
+    const winner = username;
+    socket.to(roomID).emit("lost-game", winner);
   });
 
   socket.on("current-player-position", (receivedData) => {
@@ -125,7 +152,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log(`${socket.id} disconnected`)
+    console.log(`${socket.id} disconnected`);
   });
 });
 
